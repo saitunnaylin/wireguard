@@ -10,7 +10,7 @@ services:
       HOST: ${HOST:-0.0.0.0}
       DISABLE_IPV6: ${DISABLE_IPV6:-true}
       INIT_ENABLED: ${INIT_ENABLED:-true}
-      INIT_USERNAME: ${INIT_USERNAME:-admin}
+      INIT_USERNAME: ${INIT_USERNAME:-}
       INIT_PASSWORD: ${INIT_PASSWORD:-}
       INIT_HOST: ${INIT_HOST:-}
       INIT_PORT: ${INIT_PORT:-51820}

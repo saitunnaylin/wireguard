@@ -49,6 +49,9 @@ wg_status() {
   wg_print_reachability
 
   echo ""
+  wg_print_hardening
+
+  echo ""
   echo "--- WireGuard peers ---"
   wg_out="$(wg_docker_wg show wg0 2>&1)" || true
   echo "${wg_out:-"(empty)"}"
@@ -57,7 +60,7 @@ wg_status() {
   wg_load_env ".env"
   local ui_host="${lan_ip%/*}"
   [[ -z "${ui_host}" ]] && ui_host="$(wg_host_lan_ip)"
-  [[ -z "${ui_host}" ]] && ui_host="<homelab-ip>"
+  [[ -z "${ui_host}" ]] && ui_host="<server-lan-ip>"
 
   echo ""
   echo "--- Peer traffic (phone on mobile data, VPN toggled ON) ---"

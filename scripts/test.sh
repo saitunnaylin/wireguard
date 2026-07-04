@@ -43,9 +43,11 @@ cp .env.example .env.test
 if [[ "$(uname -s)" == "Darwin" ]]; then
   sed -i '' 's/INIT_PASSWORD=$/INIT_PASSWORD=smoke-test-pass/' .env.test
   sed -i '' 's/INIT_HOST=vpn.example.com/INIT_HOST=127.0.0.1/' .env.test
+  sed -i '' 's/INIT_USERNAME=yourname/INIT_USERNAME=smoke-test-user/' .env.test
 else
   sed -i 's/INIT_PASSWORD=$/INIT_PASSWORD=smoke-test-pass/' .env.test
   sed -i 's/INIT_HOST=vpn.example.com/INIT_HOST=127.0.0.1/' .env.test
+  sed -i 's/INIT_USERNAME=yourname/INIT_USERNAME=smoke-test-user/' .env.test
 fi
 rm -rf data
 
@@ -125,7 +127,7 @@ function req(method,path,body,cookie){
   });
 }
 (async()=>{
-  const login=await req('POST','/api/session',{username:'admin',password:'smoke-test-pass',remember:false});
+  const login=await req('POST','/api/session',{username:'smoke-test-user',password:'smoke-test-pass',remember:false});
   const cookie=(login.headers['set-cookie']||[]).map(c=>c.split(';')[0]).join('; ');
   const created=await req('POST','/api/client',{name:'smoke-test',expiresAt:null},cookie);
   const list=await req('GET','/api/client',null,cookie);

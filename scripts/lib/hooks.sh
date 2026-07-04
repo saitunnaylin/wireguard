@@ -144,8 +144,13 @@ wg_apply_hooks() {
   wg_load_env "${env_file}"
 
   port="${PORT:-51821}"
-  username="${INIT_USERNAME:-admin}"
+  username="${INIT_USERNAME:-}"
   password="${password:-${INIT_PASSWORD:-}}"
+
+  if [[ -z "${username}" ]]; then
+    echo "ERROR: INIT_USERNAME is not set in ${env_file}" >&2
+    return 1
+  fi
 
   if wg_hooks_already_ok; then
     echo "OK: wg0.conf already has firewall hooks (INPUT -i wg0)"

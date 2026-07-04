@@ -71,6 +71,11 @@ cmd_validate() {
     else
       log_ok ".env: INIT_PASSWORD is set"
     fi
+    if [[ -z "${INIT_USERNAME:-}" || "${INIT_USERNAME}" == "admin" || "${INIT_USERNAME}" == "yourname" ]]; then
+      log_err ".env: INIT_USERNAME must be a non-default login name (not admin or yourname)"
+    else
+      log_ok ".env: INIT_USERNAME=${INIT_USERNAME}"
+    fi
   else
     echo "No .env yet — copy .env.example to .env before deploying."
   fi

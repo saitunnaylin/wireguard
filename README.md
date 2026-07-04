@@ -22,7 +22,7 @@ Admin ──TCP 51821──► Web UI (keep on LAN or VPN only)
 ## Requirements
 
 - Linux host with Docker Compose v2 (Debian/Ubuntu **or** EL9/EL10 — RHEL, AlmaLinux, Rocky)
-- Router port-forward: **UDP 51820** → homelab host IP
+- Router port-forward: **UDP 51820** → **LAN IP of the server running this stack**
 - Public IP or DDNS hostname (`INIT_HOST`) — **DNS only**, not Cloudflare proxied
 - WireGuard tools on the host (see [Platform setup](#platform-setup) below)
 
@@ -82,10 +82,10 @@ sudo dnf install -y wireguard-tools
 ### After platform packages — same on all distros
 
 ```bash
-git clone <this-repo-url>
+git clone git@github.com:saitunnaylin/wireguard.git
 cd wireguard
 cp .env.example .env
-# Edit .env — set INIT_HOST, INIT_PASSWORD, LAN_SUBNET, INIT_ALLOWED_IPS
+# Edit .env — set INIT_HOST, INIT_USERNAME, INIT_PASSWORD, LAN_SUBNET, INIT_ALLOWED_IPS
 
 ./scripts/wg.sh validate
 docker compose up -d
@@ -96,7 +96,7 @@ sudo ./scripts/wg.sh setup
 
 Same as [Platform setup → After platform packages](#after-platform-packages--same-on-all-distros) above.
 
-Open **http://\<homelab-ip\>:51821**, log in, create a client, scan the QR code on your phone.
+Open **http://\<server-lan-ip\>:51821** (the LAN address of the machine running Docker Compose), log in, create a client, scan the QR code on your phone.
 
 After the first successful start, **remove `INIT_PASSWORD` from `.env`** and run `docker compose up -d` again.
 
@@ -107,6 +107,7 @@ Copy `.env.example` to `.env` and customize:
 | Variable | Description |
 |----------|-------------|
 | `INIT_HOST` | Public IP or DDNS hostname in client configs (e.g. `vpn.example.com`) |
+| `INIT_USERNAME` | Web UI login name — **not** `admin` (first boot only) |
 | `INIT_PASSWORD` | Web UI password (first boot only — remove after setup) |
 | `LAN_SUBNET` | Your home network (e.g. `192.168.1.0/24`) |
 | `INIT_ALLOWED_IPS` | Routes pushed to clients — include VPN subnet + LAN |
@@ -141,19 +142,19 @@ INIT_ALLOWED_IPS=10.8.0.0/24,192.168.1.0/24,0.0.0.0/0
 Use a **dedicated VPN subdomain** with **DNS only** (grey cloud):
 
 ```
-wg.example.com   A   <your-public-ip>   Proxied: OFF
+vpn.example.com   A   <your-public-ip>   Proxied: OFF
 ```
 
 WireGuard uses **UDP** — Cloudflare orange-cloud proxy **breaks** the VPN (resolves to `104.21.x.x`).
 
-Your other domains can stay proxied. Grey cloud on `wg.*` only exposes your IP for the VPN endpoint; it does not expose homelab services.
+Your other domains can stay proxied. Grey cloud on `vpn.*` only exposes your IP for the VPN endpoint; it does not expose homelab services.
 
 DDNS update scripts must set `"proxied": false` in the Cloudflare API.
 
 Verify:
 
 ```bash
-dig +short wg.example.com   # must equal your public IP, not a Cloudflare IP
+dig +short vpn.example.com   # must equal your public IP, not a Cloudflare IP
 ```
 
 ## Security & hardening
@@ -202,12 +203,14 @@ HOST=127.0.0.1
 PORT=51821
 ```
 
-Then from your laptop: `ssh -L 51821:127.0.0.1:51821 user@homelab-ip` → open http://localhost:51821
+Then from your laptop: `ssh -L 51821:127.0.0.1:51821 user@<server-lan-ip>` → open http://localhost:51821
+
+(`<server-lan-ip>` is the WireGuard host on your LAN — hostname or IP, e.g. `192.168.1.50` or `vpn.lan`.)
 
 **2. DNS for VPN hostname — grey cloud only**
 
 ```
-wg.example.com   A   <public-ip>   Proxied: OFF
+vpn.example.com   A   <public-ip>   Proxied: OFF
 ```
 
 Orange cloud breaks WireGuard and does not protect homelab services.
@@ -222,14 +225,14 @@ INIT_ALLOWED_IPS=10.8.0.0/24,192.168.1.0/24
 
 **4. Secrets**
 
-- Strong `INIT_PASSWORD`, then **remove it from `.env`** after first boot
+- Non-default `INIT_USERNAME` and strong `INIT_PASSWORD`, then **remove `INIT_PASSWORD` from `.env`** after first boot
 - Never commit `.env` or `./data/`
 - One client profile per device; delete unused clients
 
 **5. Router**
 
-- Forward **UDP only** `INIT_PORT` (default 51820) → homelab host IP
-- No other inbound ports to the homelab
+- Forward **UDP only** `INIT_PORT` (default 51820) → **LAN IP of this server** (not your router, not other homelab machines)
+- Do not port-forward the admin UI (51821) to the internet
 
 ---
 
@@ -239,7 +242,6 @@ INIT_ALLOWED_IPS=10.8.0.0/24,192.168.1.0/24
 |-----------|-----|
 | Non-default WireGuard port | `.env` → `INIT_PORT=51830`, update router forward, recreate clients |
 | Non-default UI port | `.env` → `PORT=52821` (still block from WAN) |
-| Change admin username | `.env` → `INIT_USERNAME=yourname` (first boot only) |
 | Disable IPv6 | Already set: `DISABLE_IPV6=true` |
 | Host firewall | `sudo ./scripts/wg.sh setup` after every deploy |
 | Verify regularly | `./scripts/wg.sh status` with phone on mobile data |
@@ -273,6 +275,7 @@ Changing ports adds minor scan-noise reduction; **blocking the admin UI and usin
 ### Quick hardening checklist
 
 - [ ] Admin UI not reachable from internet (firewall or `HOST=127.0.0.1`)
+- [ ] Web UI username is not `admin` (`INIT_USERNAME` before first boot; `./scripts/wg.sh status` checks the DB)
 - [ ] Only UDP WireGuard port forwarded on router
 - [ ] `INIT_HOST` DNS is grey cloud / points to public IP
 - [ ] Split tunnel configured

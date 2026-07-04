@@ -124,11 +124,42 @@ wg_print_reachability() {
   fi
 
   echo ""
-  echo "Router must port-forward: UDP ${init_port} → ${lan_ip:-homelab-ip}"
+  echo "Router must port-forward: UDP ${init_port} → ${lan_ip:-<server-lan-ip>}"
   echo ""
   echo "If handshake=0 with VPN ON on phone (mobile data):"
   echo "  • Port forward missing/wrong on router (most common)"
   echo "  • DDNS not pointing to ${public_ip:-your public IP}"
   echo "  • ISP CGNAT (router WAN IP differs from public IP — port forward impossible)"
   echo "  • Run status again while phone VPN toggle is ON"
+}
+
+wg_print_hardening() {
+  local admin_user init_password issues=0
+  wg_load_env ".env"
+
+  echo "--- Hardening ---"
+
+  admin_user="$(wg_sqlite "SELECT username FROM users_table WHERE username='admin' LIMIT 1;" 2>/dev/null || true)"
+  if [[ -n "${admin_user}" ]]; then
+    echo "WARN: web UI still uses username 'admin' — change in Admin → Users (or recreate ./data with custom INIT_USERNAME)"
+    issues=$((issues + 1))
+  else
+    echo "OK: web UI username is not 'admin'"
+  fi
+
+  if [[ -n "${INIT_PASSWORD:-}" ]]; then
+    echo "WARN: INIT_PASSWORD is still in .env — remove after first boot"
+    issues=$((issues + 1))
+  else
+    echo "OK: INIT_PASSWORD not stored in .env"
+  fi
+
+  if [[ "${INIT_USERNAME:-}" == "admin" || "${INIT_USERNAME:-}" == "yourname" ]]; then
+    echo "WARN: .env still has placeholder INIT_USERNAME=${INIT_USERNAME} — set a real name before first boot"
+    issues=$((issues + 1))
+  fi
+
+  if [[ "${issues}" -eq 0 ]]; then
+    echo "OK: hardening checks passed"
+  fi
 }
